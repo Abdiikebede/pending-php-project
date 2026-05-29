@@ -51,8 +51,28 @@ your-folder/
     ├── assets/
     ├── config/
     └── ...
-2. Run the Cloner
-Using Terminal:
-Bashphp clone.php
-Or open directly in browser:
-texthttp://localhost/your-folder/clone.php
+
+---
+
+## 🚀 How to Use
+
+1. Place your project inside the `pending_project` folder
+2. Run the script:
+
+**Terminal:**
+```bash
+php clone.php
+
+$source = __DIR__ . '/pending_project';
+$exclude = ['node_modules', 'vendor', '.git', 'cache', 'logs', 'tmp'];
+
+
+
+👨‍💻 Author
+Abdi Kebede
+📧 abdikebede17@gmail.com
+
+
+  Made with ❤️ for developers in Ethiopia 🇪🇹
+
+```
