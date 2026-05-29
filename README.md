@@ -1,190 +1,313 @@
-🚀 Pending Project Cloner — One-Click Full Project Duplicator
-⚡ Instantly duplicate any PHP (or any language) project with a single command!
-No manual copying • No missing files • No broken paths — just run and done!
+<?php
+/**
+ * PENDING PROJECT CLONER - All-in-One
+ * One-click full project duplicator
+ * Author: Abdi Kebede
+ * Email: abdikebede17@gmail.com
+ */
 
-https://img.shields.io/badge/PHP-8.0%252B-777BB4?style=for-the-badge&logo=php&logoColor=white
-https://img.shields.io/badge/Platform-Windows%2520%257C%2520Linux%2520%257C%2520macOS-blue?style=for-the-badge
-https://img.shields.io/badge/License-Free%2520to%2520Use-brightgreen?style=for-the-badge
-https://img.shields.io/badge/Version-1.0.0-orange?style=for-the-badge
+// ==================== CONFIGURATION ====================
+$source = __DIR__ . DIRECTORY_SEPARATOR . 'pending_project';
+$destination = __DIR__ . DIRECTORY_SEPARATOR . 'cloned_project_' . date('Y-m-d_H-i-s');
+$exclude = ['node_modules', 'vendor', '.git', 'cache', 'logs', 'tmp'];
+// =======================================================
 
-✨ Perfect For
-<table> <tr> <td>
-✅ Backups
-✅ Staging Environments
-✅ Code Reviews
-✅ Deployment Preparation
-✅ Safe Experiments
-✅ Team Handoffs
+// Colors for CLI output
+$colors = [
+    'red' => "\033[31m",
+    'green' => "\033[32m",
+    'yellow' => "\033[33m",
+    'blue' => "\033[34m",
+    'magenta' => "\033[35m",
+    'cyan' => "\033[36m",
+    'reset' => "\033[0m"
+];
 
-</td> <td align="center"> <br/> 🎯 <b>One Command</b><br/> ⚡ <b>One Second</b><br/> 🔄 <b>100% Perfect Copy</b> </td> </tr> </table>
-🤔 Why This Tool?
-When you're working on a "pending" project and need to:
+// Detect if running in terminal
+$isCLI = (php_sapi_name() === 'cli');
 
-Scenario	Manual Way	This Tool
-Test risky changes	😰 Copy 100+ files	✅ 1 second
-Show progress to supervisor	😫 Zip & extract	✅ 1 click
-Deploy to staging	😓 FTP headache	✅ Run & done
-Backup before refactoring	😬 Miss hidden files	✅ Complete clone
-This script does it perfectly — every single time!
+function colorize($text, $color, $colors, $isCLI) {
+    if (!$isCLI) return $text;
+    return $colors[$color] . $text . $colors['reset'];
+}
 
-🌟 Features
-Feature	Status	Emoji
-Full recursive folder copy	✅ Done	📁
-Preserves exact file structure	✅ Done	🎯
-Creates missing directories	✅ Done	🏗️
-Zero dependencies required	✅ Done	📦
-Cross-platform (Win/Linux/Mac)	✅ Done	💻
-Single command execution	✅ Done	⚡
-Automatic error handling	✅ Done	🛡️
-Progress indicators	✅ Done	📊
-📦 What Gets Copied?
-text
-✅ All PHP files
-✅ All HTML/CSS/JS files
-✅ Images & assets
-✅ Configuration files
-✅ Hidden files (.env, .gitignore)
-✅ Nested subdirectories (any depth)
-❌ Nothing gets missed!
-🚀 Quick Start Guide (3 Seconds Setup)
-Step 1: Download
-bash
-git clone https://github.com/yourusername/pending-project-cloner.git
-# OR just download the ZIP
-Step 2: Prepare
-bash
-# Place your existing project inside:
-pending_project/
-Step 3: Run
-bash
-php one_time_copy.php
-Step 4: Done! 🎉
-text
-Your cloned project is ready at:
-cloned_project/
-📋 Example Usage
-bash
-# Before running
-my_projects/
-├── pending_project/     # Your original project
-│   ├── index.php
-│   ├── css/
-│   ├── js/
-│   └── uploads/
+// Display banner
+function showBanner($colors, $isCLI) {
+    $banner = "
+    ╔══════════════════════════════════════════════════════════╗
+    ║                                                          ║
+    ║     🚀 PENDING PROJECT CLONER - All-in-One v1.0         ║
+    ║                                                          ║
+    ║     Instantly duplicate any project with one click!     ║
+    ║                                                          ║
+    ╚══════════════════════════════════════════════════════════╝
+    ";
+    echo colorize($banner, 'cyan', $colors, $isCLI) . "\n";
+}
 
-# Run the command
-$ php one_time_copy.php
+// Copy directory recursively
+function copyDirectory($source, $destination, $exclude, $colors, $isCLI) {
+    if (!is_dir($source)) {
+        echo colorize("❌ Error: Source directory not found: $source\n", 'red', $colors, $isCLI);
+        return false;
+    }
+    
+    if (!is_dir($destination)) {
+        mkdir($destination, 0777, true);
+    }
+    
+    $dir = opendir($source);
+    $filesCopied = 0;
+    $totalSize = 0;
+    
+    while ($file = readdir($dir)) {
+        if ($file == "." || $file == "..") continue;
+        
+        $sourcePath = $source . DIRECTORY_SEPARATOR . $file;
+        $destPath = $destination . DIRECTORY_SEPARATOR . $file;
+        
+        // Check exclude patterns
+        $shouldExclude = false;
+        foreach ($exclude as $pattern) {
+            if (strpos($sourcePath, $pattern) !== false) {
+                $shouldExclude = true;
+                break;
+            }
+        }
+        
+        if ($shouldExclude) {
+            echo colorize("  ⏭️  Skipped: $file\n", 'yellow', $colors, $isCLI);
+            continue;
+        }
+        
+        if (is_dir($sourcePath)) {
+            echo colorize("  📁 Entering: $file\n", 'blue', $colors, $isCLI);
+            $result = copyDirectory($sourcePath, $destPath, $exclude, $colors, $isCLI);
+            $filesCopied += $result['files'];
+            $totalSize += $result['size'];
+        } else {
+            copy($sourcePath, $destPath);
+            $size = filesize($sourcePath);
+            $totalSize += $size;
+            $filesCopied++;
+            echo colorize("  📄 Copied: $file (" . formatSize($size) . ")\n", 'green', $colors, $isCLI);
+        }
+    }
+    closedir($dir);
+    
+    return ['files' => $filesCopied, 'size' => $totalSize];
+}
 
-# After running
-my_projects/
-├── pending_project/     # Original (unchanged)
-└── cloned_project/      # Perfect duplicate!
-    ├── index.php
-    ├── css/
-    ├── js/
-    └── uploads/
-🛠️ Command Line Options
-bash
-# Basic usage
-php one_time_copy.php
+// Format file size
+function formatSize($bytes) {
+    if ($bytes >= 1073741824) {
+        return number_format($bytes / 1073741824, 2) . ' GB';
+    } elseif ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2) . ' KB';
+    } else {
+        return $bytes . ' bytes';
+    }
+}
 
-# Specify custom source/destination
-php one_time_copy.php --source=my_project --dest=my_backup
+// Create a simple HTML report
+function createReport($source, $destination, $stats) {
+    $html = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clone Report - Pending Project Cloner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .report-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        .success-icon {
+            font-size: 60px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .stats {
+            background: #f7f9fc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .stat-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+        .path {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 15px 0;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-card">
+        <div class="success-icon">✅</div>
+        <h1 style="text-align: center;">Clone Successful!</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">Your project has been duplicated successfully</p>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">📁 Files Copied</span>
+                <span class="stat-value">{$stats['files']}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">💾 Total Size</span>
+                <span class="stat-value">{$stats['size_formatted']}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">⏱️ Duration</span>
+                <span class="stat-value">{$stats['duration']} seconds</span>
+            </div>
+        </div>
+        
+        <div class="path">
+            <strong>📂 Source:</strong> {$source}<br>
+            <strong>🎯 Destination:</strong> {$destination}
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{$destination}" class="btn">📁 Open Cloned Project</a>
+        </div>
+        
+        <div class="footer">
+            <p>Pending Project Cloner • Created by Abdi Kebede</p>
+            <p>abdikebede17@gmail.com</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    
+    file_put_contents($destination . DIRECTORY_SEPARATOR . 'clone_report.html', $html);
+    return 'clone_report.html';
+}
 
-# With verbose output
-php one_time_copy.php --verbose
-📁 Project Structure
-text
-pending-project-cloner/
-│
-├── one_time_copy.php      # Main cloner script
-├── pending_project/       # Put your project here
-│   └── (your files)
-├── cloned_project/        # Output folder (auto-created)
-├── README.md              # This file
-└── .gitignore             # Git ignore rules
-💡 Pro Tips
-<details> <summary><b>🔧 Tip 1: Create a backup before major changes</b></summary>
-bash
-php one_time_copy.php
-# Make risky changes in 'cloned_project'
-# Original stays safe in 'pending_project'
-</details><details> <summary><b>🎨 Tip 2: Create multiple variations</b></summary>
-bash
-# Copy and experiment
-php one_time_copy.php
-# Modify cloned_project
-# Run again for another copy!
-</details><details> <summary><b>⚡ Tip 3: Add to your PATH for global access</b></summary>
-bash
-# Add alias to .bashrc or .zshrc
-alias clone-project='php /path/to/one_time_copy.php'
-</details>
-❓ Frequently Asked Questions
-Q: Does it work with databases?
-A: Only files — for DB, export SQL separately.
+// ==================== MAIN EXECUTION ====================
 
-Q: Will it overwrite existing files?
-A: No, it creates a timestamped backup or asks for confirmation.
+showBanner($colors, $isCLI);
 
-Q: Can I use this for non-PHP projects?
-A: Absolutely! Works with any language — Python, Node.js, React, etc.
+echo colorize("\n📂 Source: ", 'yellow', $colors, $isCLI) . $source . "\n";
+echo colorize("🎯 Destination: ", 'yellow', $colors, $isCLI) . $destination . "\n\n";
 
-Q: Is it safe for large projects (10,000+ files)?
-A: Yes, it handles large directories efficiently.
+// Check if source exists
+if (!file_exists($source)) {
+    echo colorize("\n❌ ERROR: 'pending_project' folder not found!\n", 'red', $colors, $isCLI);
+    echo colorize("\n📝 Please create a folder named 'pending_project' and put your project inside it.\n", 'yellow', $colors, $isCLI);
+    echo colorize("\nExample structure:\n", 'cyan', $colors, $isCLI);
+    echo colorize("  /your-folder/\n", 'cyan', $colors, $isCLI);
+    echo colorize("    ├── clone.php (this file)\n", 'cyan', $colors, $isCLI);
+    echo colorize("    └── pending_project/\n", 'cyan', $colors, $isCLI);
+    echo colorize("        └── (your project files here)\n\n", 'cyan', $colors, $isCLI);
+    exit(1);
+}
 
-🔄 Compatibility
-OS	Status	Tested Version
-Windows 10/11	✅	PHP 8.2
-Linux (Ubuntu)	✅	PHP 8.0+
-macOS	✅	PHP 8.1+
-WSL	✅	Any version
-🐛 Troubleshooting
-Issue	Solution
-"Permission denied"	Run with sudo/administrator
-"Source folder not found"	Check pending_project exists
-Memory exhausted	Increase memory_limit in php.ini
-🗺️ Roadmap
-Add ZIP compression option
+$startTime = microtime(true);
 
-Add exclude patterns (node_modules, vendor)
+echo colorize("🔄 Cloning in progress...\n\n", 'cyan', $colors, $isCLI);
 
-Add sync mode (update only changed files)
+$result = copyDirectory($source, $destination, $exclude, $colors, $isCLI);
 
-Add GUI version
+$endTime = microtime(true);
+$duration = round($endTime - $startTime, 2);
 
-Add progress bar for large files
+echo colorize("\n" . str_repeat("═", 50) . "\n", 'magenta', $colors, $isCLI);
+echo colorize("✅ CLONE COMPLETED SUCCESSFULLY!\n", 'green', $colors, $isCLI);
+echo colorize(str_repeat("═", 50) . "\n", 'magenta', $colors, $isCLI);
+echo colorize("📁 Files copied: ", 'yellow', $colors, $isCLI) . $result['files'] . "\n";
+echo colorize("💾 Total size: ", 'yellow', $colors, $isCLI) . formatSize($result['size']) . "\n";
+echo colorize("⏱️  Time taken: ", 'yellow', $colors, $isCLI) . $duration . " seconds\n";
+echo colorize("🎯 Location: ", 'yellow', $colors, $isCLI) . $destination . "\n";
+echo colorize(str_repeat("═", 50) . "\n", 'magenta', $colors, $isCLI);
 
-🤝 Contributing
-Contributions welcome! Feel free to:
+// Create HTML report
+$stats = [
+    'files' => $result['files'],
+    'size' => $result['size'],
+    'size_formatted' => formatSize($result['size']),
+    'duration' => $duration
+];
+$reportFile = createReport($source, $destination, $stats);
+echo colorize("\n📄 HTML report created: " . $destination . DIRECTORY_SEPARATOR . $reportFile . "\n", 'cyan', $colors, $isCLI);
 
-🐛 Report bugs
+if ($isCLI) {
+    echo colorize("\n💡 Quick tip: To clone again, just run 'php clone.php'\n", 'yellow', $colors, $isCLI);
+} else {
+    echo "<br><br><a href='$destination/clone_report.html'>View Clone Report</a>";
+}
 
-💡 Suggest features
-
-🔧 Submit pull requests
-
-📄 License
-Free to use — no restrictions!
-Use it personally, commercially, or modify as needed.
-
-📬 Contact
-Abdi Kebede
-📧 abdikebede17@gmail.com
-🐙 GitHub: @yourusername
-
-⭐ Show Your Support
-If this tool saved you time, please:
-
-⭐ Star this repo
-
-🍴 Fork it
-
-📢 Share with colleagues
-
-<div align="center">
-Built with ❤️ for developers who value their time
-
-Report Bug · Request Feature · Star on GitHub
-
-</div>
+echo "\n";
+?>
