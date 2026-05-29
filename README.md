@@ -51,3 +51,8 @@ your-folder/
     ├── assets/
     ├── config/
     └── ...
+2. Run the Cloner
+Using Terminal:
+Bashphp clone.php
+Or open directly in browser:
+texthttp://localhost/your-folder/clone.php
